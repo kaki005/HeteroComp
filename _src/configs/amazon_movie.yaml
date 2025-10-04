@@ -1,0 +1,24 @@
+defaults:
+  - base_config # base config
+  - _self_
+model:
+    k: 20
+    width: 14
+    verbose : True
+    iter_num: 30
+    learning_rate: 0.1
+    anomaly: True
+    C_lengthscale: 4
+
+data:
+  name: "amazon_movieTV"
+  time_idx: "timestamp"
+  freq : "D"
+  init_len : 28
+  categorical_idxs : ["title", 'action','adventure','anime','arts','cerebral','christmas','classical','comedy','documentary','fantasy','fitness','horror','kids',
+      'military','music','musicals','mystery','religion','romance','science fiction', 'thriller', 'westerns']
+  continuous_idxs: ["price"]
+  label_col:
+  time_scale: 3.5e-1
+  src_ip_idx:
+  dst_ip_idx:

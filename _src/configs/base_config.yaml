@@ -1,0 +1,49 @@
+
+model:
+    name:
+    k: 10
+    width: 10
+    verbose : True
+    maxl : 5
+    iter_num: 30
+    FB: 8
+    Regime_R: 5.0e-3
+    Lambda: 0.3
+    max_ini_r: 2
+    tol_r: 0.0
+    anomaly: False
+    alpha : 1.0
+    beta : 1.0
+    learning_rate: 0.1
+    num_bins: 300
+    C_lengthscale: 200
+
+data:
+  name: "121"
+  time_idx: "Time"
+  freq : "h"
+  init_len : 20
+  categorical_idxs : []
+  label_col:
+  item_idx :
+  user_idx:
+  time_scale: 0.01
+  seed: 0
+
+
+anograph:
+    time_window:  60
+    edge_threshold: 100
+    rows: 2
+    buckets: 32
+
+save_batch: False
+plot_batch: False
+
+hydra:
+    run:
+        dir: ""
+    output_subdir: null  # Stop generating the hydra subdirector
+defaults:
+    - override hydra/hydra_logging: disabled  # disable hydra_logging
+    - override hydra/job_logging: disabled    # disable jog logging

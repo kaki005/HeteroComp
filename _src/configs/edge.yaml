@@ -1,0 +1,24 @@
+defaults:
+  - base_config # base config
+  - _self_
+model:
+    k: 20
+    width: 30
+    verbose : True
+    iter_num: 30
+    learning_rate: 0.1
+    anomaly: True
+    C_lengthscale: 30
+data:
+  name: "Edge"
+  time_idx: "frame.time"
+  freq : "S"
+  init_len :  1200
+  categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags"]
+  # categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags", "dns.retransmission",  "http.response", "dns.qry.type", "tcp.flags.ack"]
+  # continuous_idxs: ["tcp.len", "http.content_length", "udp.time_delta", "mbtcp.len"]
+  continuous_idxs: ["tcp.len"] # "http.content_length", "udp.time_delta", "mbtcp.len"は違いがなかった
+  label_col: "Attack_type"
+  time_scale: 3e-3
+  src_ip_idx: "ip.src_host"
+  dst_ip_idx: "ip.dst_host"

@@ -1,0 +1,24 @@
+defaults:
+  - base_config # base config
+  - _self_
+model:
+    k: 20
+    width: 30
+    verbose : True
+    iter_num: 30
+    learning_rate: 0.1
+    anomaly: True
+    C_lengthscale: 500
+
+data:
+  name: "cidds2017"
+  time_idx: "Timestamp"
+  freq : "S"
+  init_len :  300
+  # categorical_idxs : ["Dst Port", "Protocol"]
+  categorical_idxs : ["Src IP", "Dst IP", "Dst Port", "Protocol"]
+  continuous_idxs: ["Flow Duration", "Total Length of Fwd Packet", "Total Length of Bwd Packet", "Fwd Header Length", "Bwd Header Length", "Flow IAT Mean"]
+  label_col: "Label"
+  time_scale: 3e-4
+  src_ip_idx: "Src IP"
+  dst_ip_idx: "Dst IP"
