@@ -22,8 +22,8 @@ class Anomaly:
     def __init__(
         self,
         n_dims: np.ndarray,
-        start: datetime.datetime,
-        end: datetime.datetime,
+        start: datetime,
+        end: datetime,
         attack_name: str,
         id: int,
         cont_idx: list[str],
@@ -267,8 +267,6 @@ def plot_time_histgram(img_path: Path, colors, counter: np.ndarray, timestamps: 
     intervals, widths = split_intervals(timestamps, freq)
     intervals = intervals[widths > 1]
     widths = widths[widths > 1]
-    logging.info(f"{intervals=}")
-    logging.info(f"{widths=}")
     if len(intervals) == 0:
         logging.info(f"{timestamps=}")
         return

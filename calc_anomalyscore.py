@@ -18,11 +18,7 @@ from _src import (
     log_init,
     prepare_event_tensor,
 )
-from _src.plots import plot_anomalies, set_major_tick_per_day, set_minor_tick
-
-
-def chunked_sum(x, chunk_size, axis=0):
-    return np.array([x[i : i + chunk_size].sum(axis=axis) for i in range(0, len(x), chunk_size)])
+from _src.plots import chunked_sum, plot_anomalies, set_major_tick_per_day, set_minor_tick
 
 
 def load_anomaly_idx(tensor: pd.DataFrame, config: Config, is_batch_wise: bool):

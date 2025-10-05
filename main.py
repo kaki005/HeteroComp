@@ -1,29 +1,26 @@
+import gc
 import logging
+import pickle
 import shutil
 import time
+from pathlib import Path
+
+import hydra
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tqdm
 from omegaconf import OmegaConf
 
-
-import numpy as np
-import pickle
-import matplotlib.pyplot as plt
-import pandas as pd
-from pathlib import Path
-import sys
-import hydra
-import tqdm
-import gc
 from _src import (
-    prepare_event_tensor,
-    plot_regimeassignment,
+    Config,
     load_dataset,
-    print_dataset,
     load_model,
     log_init,
-    Config,
+    prepare_event_tensor,
+    print_dataset,
     tree_patrition,
 )
-
 
 
 @hydra.main(version_base=None, config_path="_src/configs", config_name="base_config")
@@ -83,8 +80,8 @@ def main(config: Config):
             freq=config.data.freq,
             outdir=outputdir,
         )
-        np.savetxt(outputdir / "sorted_indice.txt", sorted_indice, fmt='%d')
-        np.savetxt(outputdir / "timestamps.txt",pd.to_datetime(timestamps).strftime('%Y-%m-%dT%H:%M:%S'), fmt='%s')
+        np.savetxt(outputdir / "sorted_indice.txt", sorted_indice, fmt="%d")
+        np.savetxt(outputdir / "timestamps.txt", pd.to_datetime(timestamps).strftime("%Y-%m-%dT%H:%M:%S"), fmt="%s")
         del raw_df
 
         # Set inlier tensor to train tensor
@@ -108,10 +105,7 @@ def main(config: Config):
             :,
         ].reset_index(drop=True)
         train_timestamps = timestamps[pd.unique(tensor_Train[config.data.time_idx])]
-        tensor_Train[time_idx] = (
-            tensor_Train[time_idx].rank(method="dense", numeric_only=True).astype(int)
-            - 1
-        )
+        tensor_Train[time_idx] = tensor_Train[time_idx].rank(method="dense", numeric_only=True).astype(int) - 1
         logger.info(f"train tensor shape: {tensor_Train.max().values + 1}")
 
         ### Batch processing (Initialize) ###################
@@ -152,14 +146,10 @@ def main(config: Config):
         model.data_len = max_
         for i in tqdm.tqdm(range(0, max_, config.model.width)):
             start_time = time.perf_counter()
-            current_tensor = tensor[
-                (tensor[time_idx] >= i) & (tensor[time_idx] < (i + config.model.width))
-            ]
+            current_tensor = tensor[(tensor[time_idx] >= i) & (tensor[time_idx] < (i + config.model.width))]
             current_tensor.loc[:, time_idx] -= i
             stamp = timestamps[i : i + config.model.width]
-            shift_id = model.infer_online(
-                current_tensor, config.model.iter_num, stamp
-            )
+            shift_id = model.infer_online(current_tensor, config.model.iter_num, stamp)
             elapsed_time = time.perf_counter() - start_time
             logger.info(f"Elapsed time(online#{i}): {elapsed_time:.2f} [sec]")
             elapsed_times.append(elapsed_time)
@@ -174,13 +164,11 @@ def main(config: Config):
                     model.plot_online(outputdir_s, current_tensor, stamp)
             del current_tensor
             del stamp
-            if (i+1) %100 == 0:
+            if (i + 1) % 100 == 0:
                 gc.collect()
         model.rgm_update_fin()
         elapsed_time_stream_process = time.process_time() - start_time_stream_process
-        logger.info(
-            f"Elapsed time(all stream processing): {elapsed_time_stream_process:.2f} [sec]"
-        )
+        logger.info(f"Elapsed time(all stream processing): {elapsed_time_stream_process:.2f} [sec]")
         ### Stream processing ###############################
 
         # save overall results

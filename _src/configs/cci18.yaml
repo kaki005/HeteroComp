@@ -11,11 +11,10 @@ model:
     C_lengthscale: 50
 
 data:
-  name: "cidds2018"
+  name: "cci18"
   time_idx: "Timestamp"
   freq : "S"
   init_len :  240
-  # categorical_idxs : ["Dst Port", "Protocol"]
   categorical_idxs : ["Dst Port", "Src IP", "Dst IP", "Protocol"]
   continuous_idxs: [ "Flow Duration", "Total Length of Fwd Packet", "Total Length of Bwd Packet", "Fwd Header Length", "Bwd Header Length", "Flow IAT Mean"]
   label_col: "Label"

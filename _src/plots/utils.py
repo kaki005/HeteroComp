@@ -12,6 +12,10 @@ from sklearn import metrics
 from wordcloud import WordCloud
 
 
+def chunked_sum(x, chunk_size, axis=0):
+    return np.array([x[i : i + chunk_size].sum(axis=axis) for i in range(0, len(x), chunk_size)])
+
+
 def set_minor_tick_per_month(
     ax: Axes,
     timeColumn: pd.DatetimeIndex | pd.Series | np.ndarray | None = None,
@@ -75,7 +79,7 @@ def set_minor_tick(
         ax.xaxis.set_minor_formatter(mdates.DateFormatter(format))
 
 
-def to_datetime(value: pd.Timestamp | np.datetime64) -> datetime.datetime:
+def to_datetime(value: pd.Timestamp | np.datetime64) -> datetime:
     if isinstance(value, pd.Timestamp):  # Pandas Timestamp の場合
         return value.to_pydatetime()
     if isinstance(value, np.datetime64):  # NumPy datetime64 の場合
