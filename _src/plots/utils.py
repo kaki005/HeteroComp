@@ -66,7 +66,7 @@ def set_minor_tick(
         timeColumn = pd.Series(timeColumn)
     if start is None:
         assert timeColumn is not None
-        start = timeColumn.min().replace(hour=0, minute=0, second=0, microsecond=0).to_pydatetime()  # 開始を日付の始まりに設定
+        start = timeColumn.min().replace(hour=0, minute=0, second=0, microsecond=0).to_pydatetime()
     if end is None:
         assert timeColumn is not None
         end = pd.to_datetime(timeColumn.max()).to_pydatetime()
@@ -80,10 +80,10 @@ def set_minor_tick(
 
 
 def to_datetime(value: pd.Timestamp | np.datetime64) -> datetime:
-    if isinstance(value, pd.Timestamp):  # Pandas Timestamp の場合
+    if isinstance(value, pd.Timestamp):
         return value.to_pydatetime()
-    if isinstance(value, np.datetime64):  # NumPy datetime64 の場合
-        return pd.Timestamp(value).to_pydatetime()  # Pandas経由が最もロバスト
+    if isinstance(value, np.datetime64):
+        return pd.Timestamp(value).to_pydatetime()
     raise Exception
 
 
@@ -102,14 +102,14 @@ def set_major_tick_per_year(
         timeColumn = pd.Series(timeColumn)
     if start is None:
         assert timeColumn is not None
-        start = timeColumn.min().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).to_pydatetime()  # 開始を日付の始まりに設定
+        start = timeColumn.min().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).to_pydatetime()
     if end is None:
         assert timeColumn is not None
         end = pd.to_datetime(timeColumn.max()).to_pydatetime()
     dayLocator = mdates.YearLocator()
     ax.xaxis.set_major_locator(dayLocator)
     ax.xaxis.set_major_formatter(mdates.DateFormatter(format))
-    for tick in dayLocator.tick_values(start, end):  # 日付の変わり目に
+    for tick in dayLocator.tick_values(start, end):
         ax.axvline(x=tick, color=tick_collor, linestyle=tick_linestyle, lw=0.5)
     _set_major_tick_pos(ax, label_loc, rotation)
     return start, end
@@ -130,14 +130,14 @@ def set_major_tick_per_day(
         timeColumn = pd.Series(timeColumn)
     if start is None:
         assert timeColumn is not None
-        start = timeColumn.min().replace(hour=0, minute=0, second=0, microsecond=0).to_pydatetime()  # 開始を日付の始まりに設定
+        start = timeColumn.min().replace(hour=0, minute=0, second=0, microsecond=0).to_pydatetime()
     if end is None:
         assert timeColumn is not None
         end = pd.to_datetime(timeColumn.max()).to_pydatetime()
     dayLocator = mdates.DayLocator()
     ax.xaxis.set_major_locator(dayLocator)
     ax.xaxis.set_major_formatter(mdates.DateFormatter(format))
-    for tick in dayLocator.tick_values(start, end):  # 日付の変わり目に
+    for tick in dayLocator.tick_values(start, end):
         ax.axvline(x=tick, color=tick_collor, linestyle=tick_linestyle, lw=0.5)
     _set_major_tick_pos(ax, label_loc, rotation)
     return start, end
@@ -148,10 +148,10 @@ def _set_major_tick_pos(
     label_loc: float = -0.03,
     rotation: int = 0,
 ):
-    for label in ax.get_xticklabels():  # 日付ラベルごとに
-        label.set_rotation(rotation)  # 回転
-        label.set_verticalalignment("top")  # ↓とセットで効く
-        label.set_y(label_loc)  # ← y座標を下にずらす（デフォルトより小さい値に）
+    for label in ax.get_xticklabels():
+        label.set_rotation(rotation)  # rotate
+        label.set_verticalalignment("top")
+        label.set_y(label_loc)
 
 
 def set_minor_tick_per_day(
@@ -176,7 +176,7 @@ def set_minor_tick_per_day(
     ax.xaxis.set_minor_locator(dayLocator)
     if show_labels:
         ax.xaxis.set_minor_formatter(mdates.DateFormatter(format))
-    for tick in dayLocator.tick_values(start, end):  # 変わり目に
+    for tick in dayLocator.tick_values(start, end):
         ax.axvline(x=tick, color=tick_collor, linestyle=tick_linestyle, lw=0.3)
     return start, end
 
@@ -189,8 +189,8 @@ def split_intervals(timestamps: np.ndarray, freq: str, skip_num: int = 0):
             threshold = np.timedelta64(15, "D")
         case "H":
             threshold = np.timedelta64(48, "h")
-    mask = np.diff(timestamps) >= threshold  # 閾値以上の差がある場所（True/Falseの配列）
-    indices = np.where(mask)[0] + 1  # 条件を満たすインデックス
+    mask = np.diff(timestamps) >= threshold
+    indices = np.where(mask)[0] + 1
     start = 0
     intervals = []
     widths = []

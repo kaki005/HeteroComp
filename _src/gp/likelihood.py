@@ -1,14 +1,15 @@
 import math
 
-import jax.numpy as np
 import equinox as eqx
+import jax.numpy as np
 from jax import jacrev, vmap
+from jax.lax import stop_gradient
 from jax.scipy.linalg import cholesky, inv
 from jax.scipy.special import gammaln
 from jaxtyping import Array
-from .bayesnewton_cubature import gauss_hermite, cho_factor
+
+from .bayesnewton_cubature import cho_factor, gauss_hermite
 from .bayesnewton_utils import sigmoid, sigmoid_diff, softplus
-from jax.lax import stop_gradient
 
 LOG2PI = math.log(2 * math.pi)
 
@@ -33,9 +34,7 @@ def log_density_cubature(likelihood, y, mean, cov, bin_index, cubature=None):
     # fsigᵢ=xᵢ√cₙ + mₙ: scale locations according to cavity dist.
     sigma_points = cav_cho @ np.atleast_2d(x) + mean
     # pre-compute wᵢ p(yₙ|xᵢ√(2vₙ) + mₙ)
-    weighted_likelihood_eval = w * likelihood.evaluate_likelihood(
-        y, sigma_points, bin_index
-    )
+    weighted_likelihood_eval = w * likelihood.evaluate_likelihood(y, sigma_points, bin_index)
     # Compute partition function via cubature:
     # Zₙ = ∫ p(yₙ|fₙ) 𝓝(fₙ|mₙ,vₙ) dfₙ ≈ ∑ᵢ wᵢ p(yₙ|fsigᵢ)
     Z = np.sum(weighted_likelihood_eval)
@@ -105,13 +104,8 @@ class Likelihood(eqx.Module):
         The implicit observation model is:
             h(fₙ,rₙ) = E[yₙ|fₙ] + √Cov[yₙ|fₙ] σₙ
         """
-        conditional_expectation, conditional_covariance = self.conditional_moments(
-            f, bin_index
-        )
-        obs_model = (
-            conditional_expectation
-            + cholesky(conditional_covariance.T, lower=True) @ sigma
-        )
+        conditional_expectation, conditional_covariance = self.conditional_moments(f, bin_index)
+        obs_model = conditional_expectation + cholesky(conditional_covariance.T, lower=True) @ sigma
         return np.squeeze(obs_model)
 
     def gauss_newton(self, y, f, bin_index: int):
@@ -130,16 +124,12 @@ class Likelihood(eqx.Module):
         maskv = mask.reshape(-1, 1)
         # build a mask
         y = np.where(maskv, E, y)
-        C_masked = np.where(
-            maskv + maskv.T, 0.0, C
-        )  # ensure masked entries are independent
+        C_masked = np.where(maskv + maskv.T, 0.0, C)  # ensure masked entries are independent
         C = np.where(np.diag(mask.reshape(-1)), 1, C_masked)  # ensure cholesky passes
 
         cholC = cholesky(C, lower=True)
         V = inv(cholC) @ (y - E)  # cannot use a solve here since cholC is triangular
-        J = self.generalised_gauss_newton_residual_jacobian(
-            f, cholC, bin_index
-        )  # inv(cholC) @ gradE  # residual Jacobian
+        J = self.generalised_gauss_newton_residual_jacobian(f, cholC, bin_index)  # inv(cholC) @ gradE  # residual Jacobian
         # H = self.generalised_gauss_newton_residual_hessian(f, cholC)  # inv(cholC) @ hessianE  # residual Hessian
         log_target = -0.5 * V.T @ V
         jacobian = J.T @ V
@@ -148,9 +138,7 @@ class Likelihood(eqx.Module):
         return log_target, jacobian, hessian_approx  # , second_order_term
 
     def generalised_gauss_newton_residual_jacobian(self, f, cholC, bin_idx: int):
-        return inv(cholC) @ np.squeeze(
-            jacrev(self.conditional_moments)(f, bin_idx)[0], axis=(1, -1)
-        )  # TODO: is this correct?
+        return inv(cholC) @ np.squeeze(jacrev(self.conditional_moments)(f, bin_idx)[0], axis=(1, -1))  # TODO: is this correct?
 
     def log_density(self, y, mean, cov, bin_index, cubature=None):
         """
@@ -178,9 +166,7 @@ class Likelihood(eqx.Module):
         y = np.where(mask, m, y)
 
         # compute variational expectations and their derivatives
-        var_exp, dE_dm, d2E_dm2 = vmap(
-            self.variational_expectation_, (0, 0, 0, None, None)
-        )(y, m, v, bin_index, cubature)
+        var_exp, dE_dm, d2E_dm2 = vmap(self.variational_expectation_, (0, 0, 0, None, None))(y, m, v, bin_index, cubature)
 
         # apply mask
         var_exp = np.where(np.squeeze(mask), 0.0, np.squeeze(var_exp))
@@ -195,16 +181,12 @@ class Likelihood(eqx.Module):
 
     def variational_gauss_newton(self, y, mean, cov, bin_index: int, cubature=None):
         if cubature is None:
-            x, w = gauss_hermite(
-                mean.shape[0]
-            )  # Gauss-Hermite sigma points and weights
+            x, w = gauss_hermite(mean.shape[0])  # Gauss-Hermite sigma points and weights
         else:
             x, w = cubature(mean.shape[0])
         w = w[:, None, None]
         sigma_points = cholesky(cov, lower=True) @ np.atleast_2d(x) + mean
-        log_target, jacobian, hessian_approx = vmap(
-            self.gauss_newton, in_axes=(None, 1, None)
-        )(y, sigma_points[..., None], bin_index)
+        log_target, jacobian, hessian_approx = vmap(self.gauss_newton, in_axes=(None, 1, None))(y, sigma_points[..., None], bin_index)
         return (
             np.sum(w * log_target),
             np.sum(w * jacobian, axis=0),
@@ -215,9 +197,7 @@ class Likelihood(eqx.Module):
     def evaluate_log_likelihood(self, y, f, bin_index: int):
         raise NotImplementedError
 
-    def variational_expectation_(
-        self, y, post_mean, post_cov, bin_index: int, cubature=None
-    ):
+    def variational_expectation_(self, y, post_mean, post_cov, bin_index: int, cubature=None):
         raise NotImplementedError
 
     def conditional_moments(self, f, bin_index: int):
@@ -291,9 +271,7 @@ class Poisson(Likelihood):
             Var[yₙ|fₙ] = link(fₙ)
         """
         # TODO: multi-dim case
-        return self.link_fn(f) * self.binsize[bin_index], self.link_fn(
-            f
-        ) * self.binsize[bin_index]
+        return self.link_fn(f) * self.binsize[bin_index], self.link_fn(f) * self.binsize[bin_index]
         # return self.link_fn(f) * self.binsize, vmap(np.diag, 1, 2)(self.link_fn(f) * self.binsize)
 
     def analytical_linearisation(self, m, bin_index: int, sigma):
@@ -312,9 +290,7 @@ class Poisson(Likelihood):
         )
         Hf = np.diag(
             np.squeeze(
-                d2link_fm
-                - 0.25 * link_fm**-1.5 * dlink_fm**2 * sigma.reshape(-1, 1)
-                + 0.5 * link_fm**-0.5 * d2link_fm * sigma.reshape(-1, 1),
+                d2link_fm - 0.25 * link_fm**-1.5 * dlink_fm**2 * sigma.reshape(-1, 1) + 0.5 * link_fm**-0.5 * d2link_fm * sigma.reshape(-1, 1),
                 axis=-1,
             )
         )
@@ -322,9 +298,7 @@ class Poisson(Likelihood):
         Hsigma = np.zeros_like(Jsigma)
         return Jf, Hf, Jsigma, Hsigma
 
-    def variational_expectation_(
-        self, y, post_mean, post_cov, bin_index: int, cubature=None
-    ):
+    def variational_expectation_(self, y, post_mean, post_cov, bin_index: int, cubature=None):
         """
         Computes the "variational expectation", i.e. the
         expected log-likelihood, and its derivatives w.r.t. the posterior mean
@@ -340,21 +314,13 @@ class Poisson(Likelihood):
             dE_dm: derivative of E[log p(yₙ|fₙ)] w.r.t. mₙ  [scalar]
             d2E_dm2: 2nd derivative of E[log p(yₙ|fₙ)] w.r.t. mₙ  [scalar]
         """
-        # TODO: multi-dim case
-        exp_mean_cov = self.binsize[bin_index] * np.exp(
-            post_mean + post_cov / 2
-        )  # λの期待値
+        exp_mean_cov = self.binsize[bin_index] * np.exp(post_mean + post_cov / 2)  # Expectation of λ
         # Compute expected log likelihood:
-        exp_log_lik = (
-            y * np.log(self.binsize[bin_index])
-            + y * post_mean
-            - exp_mean_cov
-            - gammaln(y + 1.0)
-        )  # E[log p(y_n|f_n)]
+        exp_log_lik = y * np.log(self.binsize[bin_index]) + y * post_mean - exp_mean_cov - gammaln(y + 1.0)  # E[log p(y_n|f_n)]
         # Compute first derivative:
-        dE_dm = y - exp_mean_cov  # E[log p(y_n|f_n)]の平均に対する微分
+        dE_dm = y - exp_mean_cov  # Differential with respect to the mean of E[log p(y_n|f_n)]
         # Compute second derivative:
-        d2E_dm2 = -exp_mean_cov  # E[log p(y_n|f_n)]の平均に対する2階微分
+        d2E_dm2 = -exp_mean_cov  # Second derivative with respect to the mean of E[log p(y_n|f_n)]
         return exp_log_lik, dE_dm, d2E_dm2.reshape(-1, 1)
 
 

@@ -48,7 +48,6 @@ def plot_anomaly_scores(ax: Axes, scores: np.ndarray, time_index: pd.DatetimeInd
 
 
 def plot_pr_curve(fig_path: Path, true_labels: np.ndarray, anomaly_scores: np.ndarray):
-    # Pr-auc直線
     precision, recall, thresholds = metrics.precision_recall_curve(true_labels, anomaly_scores)
     pr_auc = metrics.auc(recall, precision)
     plt.plot(recall, precision, label="PR curve (area = %.2f)" % pr_auc)
@@ -66,7 +65,7 @@ def load_animaly_score(out_dir: Path, config: Config, is_batchwise: bool):
     assert out_dir.exists()
     match config.model.name:
         case "heterocomp":
-            anomalies = np.loadtxt(out_dir / "chisquare_scores.txt").astype(float)  # (batch_num, topic)
+            anomalies = np.loadtxt(out_dir / "chisquare_scores.txt").astype(float)  # (batch_num, K)
     return anomalies
 
 
@@ -135,7 +134,7 @@ def main(config: Config):
             input_dir /= config.data.name
             config.data.seed = seed
             input_dir /= f"seed{config.data.seed}"
-            input_dir /= f"topic{config.model.k}_scale{config.data.time_scale}_width{config.model.width}_initlen{config.data.init_len}"
+            input_dir /= f"component{config.model.k}_scale{config.data.time_scale}_width{config.model.width}_initlen{config.data.init_len}"
             logger.info(f"{input_dir=}")
             assert input_dir.exists()
             time_idx = config.data.time_idx
@@ -222,7 +221,6 @@ def main(config: Config):
             fig.savefig(outputdir / "auc-roc.png")
             plt.close(fig)
 
-            # pr曲線
             pr_auc, precision, recall, thresholds = plot_pr_curve(outputdir / "pr-auc.png", true_labels, anomaly_scores)
             logger.info(f"PR-AUC score: {pr_auc:.4f}")
 

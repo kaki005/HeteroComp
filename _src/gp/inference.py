@@ -1,12 +1,12 @@
+import equinox as eqx
 import jax.numpy as np
-
 from equinox.nn import State
-from .bayesnewton_utils import ensure_diagonal_positive_precision, transpose, set_z_stats
-from .likelihood import Poisson
 from jax import vmap
 from jaxtyping import Array
+
+from .bayesnewton_utils import ensure_diagonal_positive_precision, set_z_stats, transpose
 from .gaussian import GaussianDistribution
-import equinox as eqx
+from .likelihood import Poisson
 
 
 def newton_update(mean, jacobian, hessian):
@@ -20,15 +20,10 @@ def newton_update(mean, jacobian, hessian):
     jacobian = np.where(np.isnan(jacobian), hessian @ mean, jacobian)
 
     # Newton update
-    pseudo_likelihood_nat1 = (
-        jacobian - hessian @ mean
-    )
-    pseudo_likelihood_nat2 = (
-        -hessian
-    )
+    pseudo_likelihood_nat1 = jacobian - hessian @ mean
+    pseudo_likelihood_nat2 = -hessian
 
     return pseudo_likelihood_nat1, pseudo_likelihood_nat2
-
 
 
 # ======================================
@@ -39,9 +34,6 @@ class InferenceMixin(eqx.Module):
     The approximate inference class. To be used as a Mixin, to add inference functionality to the model classƒ.
     Each approximate inference scheme implements an 'update_()' method which is called during
     inference in order to update the local likelihood approximation (the sites).
-    TODO: improve code sharing between classes
-    TODO: re-derive and re-implement QuasiNewton methods
-    TODO: move as much of the generic functionality as possible from the base model class to this class.
     """
 
     pseudo_likelihood: GaussianDistribution
@@ -55,9 +47,7 @@ class InferenceMixin(eqx.Module):
         # use the chosen inference method (VI, EP, ...) to compute the necessary terms for the parameter update
         mean, jacobian, hessian = self.update_variational_params(state, lr, **kwargs)
         # ---- Newton update ----
-        nat1_new, nat2_new = newton_update(
-            mean, jacobian, hessian
-        )  # compute narural param
+        nat1_new, nat2_new = newton_update(mean, jacobian, hessian)  # compute narural param
         # only required for SparseMarkov models
         _, _, old_nat1, old_nat2 = self.pseudo_likelihood.state(state)
         nat1, nat2 = self.group_natural_params(state, nat1_new, nat2_new)
@@ -130,9 +120,7 @@ class VariationalInference(InferenceMixin):
 
         mean_f, cov_f, W = self.conditional_posterior_to_data(state)
         # VI expected density is expected log-likelihood: E_q[log p(y|f)]
-        ell, dell_dm, d2ell_dm2 = vmap(
-            self.likelihood.variational_expectation, (0, 0, 0, 0, None)
-        )(Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature)
+        ell, dell_dm, d2ell_dm2 = vmap(self.likelihood.variational_expectation, (0, 0, 0, 0, None))(Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature)
         if ensure_psd:  # manual fix to avoid non-PSD precision
             d2ell_dm2 = -ensure_diagonal_positive_precision(-d2ell_dm2)
         jacobian = transpose(W) @ dell_dm
@@ -150,9 +138,7 @@ class VariationalInference(InferenceMixin):
         mean_f, cov_f, W = self.conditional_posterior_to_data(state)
 
         # VI expected density is expected log-likelihood: E_q[log p(y|f)]
-        ell, _, _ = vmap(self.likelihood.variational_expectation, (0, 0, 0, 0, None))(
-            Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature
-        )
+        ell, _, _ = vmap(self.likelihood.variational_expectation, (0, 0, 0, 0, None))(Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature)
         KL = self.compute_kl(state)  # KL[q(f)|p(f)]
         variational_free_energy = -(  # the variational free energy, i.e., the negative ELBO
             scale * np.nansum(ell)  # nansum accounts for missing data
@@ -182,12 +168,10 @@ class VariationalGaussNewton(VariationalInference):
         **kwargs,
     ):
         mean_f, cov_f, W = self.conditional_posterior_to_data(state)
-        log_target, jacobian, hessian = vmap(
-            self.likelihood.variational_gauss_newton, (0, 0, 0, 0, None)
-        )(Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature)
+        log_target, jacobian, hessian = vmap(self.likelihood.variational_gauss_newton, (0, 0, 0, 0, None))(Y, mean_f, cov_f, np.arange(Y.shape[0]), cubature)
         jacobian = transpose(W) @ jacobian  # (50)
         hessian = transpose(W) @ hessian @ W  # (50)
-        hessian = -ensure_diagonal_positive_precision(-hessian)  # 負の固有値を消す
+        hessian = -ensure_diagonal_positive_precision(-hessian)
         if mean_f.shape[1] == jacobian.shape[1]:
             return mean_f, jacobian, hessian
         else:  # sparse markovian case

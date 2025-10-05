@@ -35,7 +35,7 @@ def main(config: Config):
         outputdir = Path(f"./_out/{config.model.name}/")
         outputdir /= config.data.name
         outputdir /= f"seed{config.data.seed}"
-        outputdir /= f"topic{config.model.k}_scale{config.data.time_scale}_width{config.model.width}_initlen{config.data.init_len}"
+        outputdir /= f"component{config.model.k}_scale{config.data.time_scale}_width{config.model.width}_initlen{config.data.init_len}"
         # assert not outputdir.exists()
         outputdir.mkdir(exist_ok=True, parents=True)
         OmegaConf.save(config, outputdir / "config.yaml")
@@ -127,9 +127,6 @@ def main(config: Config):
             if outputdir_s.exists():
                 shutil.rmtree(outputdir_s)
             outputdir_s.mkdir(parents=True)
-            # model.save(
-            #     outputdir_s, tensor_Train, regime_assignments, [elapsed_time]
-            # )
             if config.save_batch:
                 model.save_online(outputdir_s, tensor_Train, category_encoder)
             if config.plot_batch:
@@ -149,7 +146,7 @@ def main(config: Config):
             current_tensor = tensor[(tensor[time_idx] >= i) & (tensor[time_idx] < (i + config.model.width))]
             current_tensor.loc[:, time_idx] -= i
             stamp = timestamps[i : i + config.model.width]
-            shift_id = model.infer_online(current_tensor, config.model.iter_num, stamp)
+            model.infer_online(current_tensor, config.model.iter_num, stamp)
             elapsed_time = time.perf_counter() - start_time
             logger.info(f"Elapsed time(online#{i}): {elapsed_time:.2f} [sec]")
             elapsed_times.append(elapsed_time)
@@ -166,7 +163,6 @@ def main(config: Config):
             del stamp
             if (i + 1) % 100 == 0:
                 gc.collect()
-        model.rgm_update_fin()
         elapsed_time_stream_process = time.process_time() - start_time_stream_process
         logger.info(f"Elapsed time(all stream processing): {elapsed_time_stream_process:.2f} [sec]")
         ### Stream processing ###############################
@@ -179,12 +175,6 @@ def main(config: Config):
         # time_index = timepoint_encoder.inverse_transform(pd.unique(tensor[time_idx]))
         model.plot(outputdir, category_encoder, timestamps)
         logger.info(regime_assignments)
-        # モデルを保存
-        try:
-            with open(outputdir / "model.pickle", mode="wb") as fo:
-                pickle.dump(model, fo)
-        except Exception as ex:
-            logger.exception(ex)
     except Exception as ex:
         logger.exception(ex)
 

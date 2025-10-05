@@ -3,15 +3,12 @@ import logging
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from .bayesnewton_ops import rauch_tung_striebel_smoother, kalman_filter
-from .bayesnewton_utils import (
-    process_noise_covariance,
-    temporal_conditional,
-    mvn_logpdf, transpose
-)
 from beartype import beartype as typechecker
 from jax.lib import xla_bridge
-from jaxtyping import Float, jaxtyped, Scalar, Array
+from jaxtyping import Array, Float, Scalar, jaxtyped
+
+from .bayesnewton_ops import kalman_filter, rauch_tung_striebel_smoother
+from .bayesnewton_utils import mvn_logpdf, process_noise_covariance, temporal_conditional, transpose
 from .Kernel import StationaryKernel
 from .ops import kalman_filter_online
 
@@ -43,33 +40,20 @@ class MarkovGP(eqx.Module):
         self.parallel = bool(xla_bridge.get_backend().platform == "gpu")
         self.logger = logging.getLogger(__name__)
 
-    def predict(
-        self, trainT, testT, m0, P0, obs_means, obs_vars, R=None, return_latent=False
-    ):
+    def predict(self, trainT, testT, m0, P0, obs_means, obs_vars, R=None, return_latent=False):
         """
         predict at new test locations X
         """
         dts = jnp.concatenate([jnp.zeros((1, 1)), jnp.diff(trainT, axis=0)])
-        smooth_mean, smoother_cov, gains = self._forward_backward(
-            m0, P0, obs_means, obs_vars, dts
-        )
+        smooth_mean, smoother_cov, gains = self._forward_backward(m0, P0, obs_means, obs_vars, dts)
         # add dummy states at either edge
         inf = 1e10 * jnp.ones_like(trainT[0, :1])
         T_aug = jnp.block([[-inf], [trainT[:, :1]], [inf]])
         # predict the state distribution at the test time steps:
-        state_mean, state_cov = temporal_conditional(
-            T_aug, testT, smooth_mean, smoother_cov, gains, self.kernel
-        )
+        state_mean, state_cov = temporal_conditional(T_aug, testT, smooth_mean, smoother_cov, gains, self.kernel)
         if return_latent:
             return state_mean.squeeze(), state_cov.squeeze()
         H = self.kernel.measurement_model()
-        # if self.spatio_temporal:
-        #     # TODO: if R is fixed, only compute B, C once
-        #     B, C = self.kernel.spatial_conditional(R, predict=True)
-        #     W = B @ H
-        #     test_mean = W @ state_mean
-        #     test_var = W @ state_cov @ transpose(W) + C
-        # else:
         test_mean, test_var = H @ state_mean, H @ state_cov @ transpose(H)
 
         return test_mean.squeeze(), test_var.squeeze()
@@ -85,12 +69,10 @@ class MarkovGP(eqx.Module):
         P0: Float[Array, "N 1"],
         dts: Float[jax.numpy.ndarray, "N"],
     ):
-        ZERO = 1e-8  # 分散がnanになるのを防ぐ閾値
-        post_means, post_covs, gains = self._forward_backward(
-            m0, P0, obs_mean, obs_variances, dts
-        )
+        ZERO = 1e-8  # threshold
+        post_means, post_covs, gains = self._forward_backward(m0, P0, obs_mean, obs_variances, dts)
         means, covs = self._latent2Obs(post_means, post_covs, obs_variances)
-        covs = jnp.where(covs < ZERO, ZERO, covs)  # 分散が小さくならないようにする
+        covs = jnp.where(covs < ZERO, ZERO, covs)  # Ensure that the variance does not decrease.
         return (
             means.reshape(-1),
             covs.reshape(-1),
@@ -115,8 +97,6 @@ class MarkovGP(eqx.Module):
             P0,
             parallel=self.parallel,
         )  # predict and filter
-        # log p(y_{1:T}) = \sum_t^T[\log |S_t| + (y_t-\hat y_t)S_t^{-1}(y_t-\hat y_t) + \log 2\pi]
-        # S_t は予測分散
         return jnp.sum(ell)
 
     def anomaly_score(
@@ -127,13 +107,8 @@ class MarkovGP(eqx.Module):
         P0: Float[Array, "N 1"],
         dts: Float[Array, "N"],
     ):
-        # TODO: 未完成
-        post_means, post_covs, gains = self._forward_backward(
-            m0, P0, obs_mean, obs_variances, dts
-        )
-        pred_mean, pred_variances = self._latent2Obs(
-            post_means, post_covs, obs_variances
-        )
+        post_means, post_covs, gains = self._forward_backward(m0, P0, obs_mean, obs_variances, dts)
+        pred_mean, pred_variances = self._latent2Obs(post_means, post_covs, obs_variances)
         return _anomaly_vmap(obs_mean, pred_mean, pred_variances)
 
     # region (private method)
@@ -146,10 +121,8 @@ class MarkovGP(eqx.Module):
         obs_variances: Float[Array, "N 1"],
         dts: Float[Array, "N"],
     ):
-        ZERO = 1e-8  # 分散がnanになるのを防ぐ閾値
-        obs_variances = jnp.where(
-            obs_variances < ZERO, ZERO, obs_variances
-        )  # 分散が小さくならないようにする
+        ZERO = 1e-8  # threshold
+        obs_variances = jnp.where(obs_variances < ZERO, ZERO, obs_variances)  # Ensure that the variance does not decrease.
         ell, Ss, vs, (filt_means, filt_covs) = kalman_filter_online(
             dts,
             self.kernel,
@@ -169,9 +142,7 @@ class MarkovGP(eqx.Module):
         obs_variances: Float[Array, "N 1"],
         dts: Float[Array, "N"],
     ):
-        ell, Ss, vs, (filt_means, filt_covs) = self._forward(
-            m0, P0, obs_mean, obs_variances, dts
-        )
+        ell, Ss, vs, (filt_means, filt_covs) = self._forward(m0, P0, obs_mean, obs_variances, dts)
         latent_mean, latent_cov, gains = rauch_tung_striebel_smoother(
             dts,
             self.kernel,
@@ -186,9 +157,7 @@ class MarkovGP(eqx.Module):
         return latent2measure(self.kernel, latent_means, latent_cov, obs_variances)
 
     @eqx.filter_vmap(in_axes=(None, 0, None, None))
-    def _predict_vmap(
-        self, dt, m0, P0
-    ) -> tuple[Float[Scalar, "1"], Float[Array, "1 1"]]:
+    def _predict_vmap(self, dt, m0, P0) -> tuple[Float[Scalar, "1"], Float[Array, "1 1"]]:
         """
         predict at new test locations.
         """
@@ -197,7 +166,7 @@ class MarkovGP(eqx.Module):
         H = self.kernel.measurement_model()
         pred_mean = A @ m0
         pred_cov = A @ P0 @ transpose(A) + Q
-        jitter = 1e-6  # 観測ノイズ
+        jitter = 1e-6  # obs noise
         obs_mean, obs_var = H @ pred_mean, H @ pred_cov @ transpose(H) + jitter
         return obs_mean.squeeze(), obs_var.squeeze()
 
@@ -222,5 +191,4 @@ def noise_covariance_vmap(A, Pinf):
 
 @eqx.filter_vmap
 def _anomaly_vmap(obs_mean, pred_mean, out_var):
-    # return jnp.squeeze((obs_mean - pred_mean)*(obs_mean - pred_mean) /out_var + jnp.log(jnp.abs(2 * jnp.pi *out_var)))
     return jnp.squeeze((obs_mean - pred_mean) * (obs_mean - pred_mean) / out_var)

@@ -3,7 +3,6 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from turtle import width
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -168,7 +167,7 @@ def extract_anomalies_ci(
                 anomaly_dic[attack] = Anomaly(
                     n_dims, to_datetime(timestamps[row[time_idx]]), to_datetime(timestamps[row[time_idx]]), attack, attack_id, cont_idx, cate_idx, counterM, np.zeros(T, dtype=int), []
                 )
-                attack_id += 1  # 新しい異常id
+                attack_id += 1  # new anomaly id
             for j, idx in enumerate(cate_idx + cont_idx):
                 anomaly_dic[attack].counterM[idx][row[idx]] += 1
             anomaly_dic[attack].counterT[row[time_idx]] += 1
@@ -200,16 +199,16 @@ def extract_anomalies(df: pd.DataFrame, config: DataConfig, timestamps: np.ndarr
     data_indexes = []
     for i, row in df.iterrows():
         attack = row[label_col]
-        if attack != 0:  # 異常なら
+        if attack != 0:  # if anomaly
             changeAnomaly = attack_name != attack
             data_indexes.append(i)
-            if start is None or changeAnomaly:  # startがあり別の異常なら
-                if start is not None:  # startがあり別の異常なら
-                    if end is None:  # endがなければ今をendとする。
+            if start is None or changeAnomaly:
+                if start is not None:
+                    if end is None:
                         end = start
                     logging.info(f"{attack_id} : {start}~{end} {attack_name}")
                     anomalies.append(Anomaly(n_dims, start, end, attack_name, attack_id, cont_idx, cate_idx, counterM, counterT, data_indexes))
-                    attack_id += 1  # 新しい異常id
+                    attack_id += 1
                     counterM = {idx: np.zeros(df[idx].max() + 1) for idx in cont_idx + cate_idx}
                     counterT = np.zeros(T, dtype=int)
                     data_indexes = []
@@ -221,7 +220,7 @@ def extract_anomalies(df: pd.DataFrame, config: DataConfig, timestamps: np.ndarr
             for i, idx in enumerate(cate_idx + cont_idx):
                 counterM[idx][row[idx]] += 1
             counterT[row[time_idx]] += 1
-        else:  # 正常なら
+        else:  # if normal
             for i, idx in enumerate(cate_idx + cont_idx):
                 normal_counterM[idx][row[idx]] += 1
             normal_counterT[row[time_idx]] += 1
@@ -338,7 +337,6 @@ def plot_anomaly_time_hist(out_dir: Path, colors, anomalies: list[Anomaly], time
     for i, (start, end) in enumerate(intervals):
         timestamps_i = timestamps[start:end]
         offset = np.zeros(timestamps_i.shape[0], dtype=int)
-        # bar_width = np.minimum(np.diff(timestamps_i, append=timestamps_i[-1] + np.timedelta64(1, "s")), np.timedelta64(10, "s"))
         bar_width = np.diff(timestamps_i, append=timestamps_i[-1] + np.timedelta64(1, "s"))
         maxY = 10
         for j, anomaly in enumerate(anomalies):

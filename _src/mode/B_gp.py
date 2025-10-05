@@ -153,7 +153,7 @@ class B_gp(Base):
         mean_series = np.vstack(self.mean_history)
         out_dir.mkdir(exist_ok=True)
         y = scipy.special.softmax(mean_series, axis=1).T
-        labels = [f"topic {k + 1}" for k in range(self.k)]
+        labels = [f"component {k + 1}" for k in range(self.k)]
         fig, ax = plt.subplots(figsize=(30, 20))
         ax.stackplot(time_labels, y, labels=labels, colors=self.colors)
         if self.dataConfig.freq == "H":
@@ -163,7 +163,7 @@ class B_gp(Base):
             set_minor_tick_per_month(ax, time_labels)
         ax.legend()
         fig.tight_layout()
-        fig.savefig(out_dir / "B_topic_prob.png")
+        fig.savefig(out_dir / "B_component_prob.png")
         plt.close(fig)
 
         for i in range(0, self.k, 10):
@@ -172,7 +172,7 @@ class B_gp(Base):
                 ax.plot(
                     time_labels,
                     mean_series[:, j],
-                    label=f"topic {j + 1}",
+                    label=f"component {j + 1}",
                 )
             ax.set_xticklabels(ax.get_xticklabels(), rotation=45)  # rotate label
             ax.legend()
@@ -279,6 +279,6 @@ def datetime_diff(timestamps: np.ndarray, freq: str, time_scale: float = 1.0):
 
 
 def freq_to_timedelta64(freq_str):
-    """pandasのfreqからnp.timedelta64に変換します"""
+    """convart pandas.freq to np.timedelta64."""
     offset = pd.tseries.frequencies.to_offset(freq_str)
     return np.timedelta64(offset.delta)

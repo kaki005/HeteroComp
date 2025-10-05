@@ -36,7 +36,7 @@ class Basemodel:
         self.n_dims[0] = config.width
         self.n_dims = self.n_dims.astype(int)
         self.n_modes: int = len(self.n_dims)
-        """モード数"""
+        """number of attributes."""
         self.logger = logging.getLogger(f"{__class__}")
         self.categorical_idxs: list[str] = categorical_idxs
         self.verbose: bool = config.verbose
@@ -87,10 +87,10 @@ class Basemodel:
                     ).generate_from_frequencies(dic)
                     axs[k].imshow(im)
                     axs[k].axis("off")
-                    axs[k].set_title("Topic " + str(k + 1))
+                    axs[k].set_title("Component " + str(k + 1))
                     sorted_keys = sorted(dic, key=dic.get, reverse=True)
                     with open(
-                        mode_dir / f"regime_{i + 1}_topic_{k + 1}.txt",
+                        mode_dir / f"regime_{i + 1}_component_{k + 1}.txt",
                         mode="w",
                     ) as f:
                         for key in sorted_keys:

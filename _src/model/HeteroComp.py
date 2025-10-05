@@ -4,7 +4,6 @@ import copy
 import logging
 import pickle
 from pathlib import Path
-from random import shuffle
 
 import matplotlib.pyplot as plt
 import numba
@@ -172,7 +171,7 @@ class HeteroComp(Basemodel):
             self.normal_counterM = [self.counterM[mode + 1] for mode in range(self.n_modes - 1)]
             self.normal_counterK = self.counterK
             self.total_interval = self._time_interval(train_timestamps)
-        self.B.last_date = None  # 時刻リセット
+        self.B.last_date = None  # reset
         n = 0
         for i, A_mode in enumerate(self.categoricalA):
             A_mode.reset()  # reset alpha
@@ -187,7 +186,6 @@ class HeteroComp(Basemodel):
             n += len(tensor)
             for mode, a in enumerate(self.categoricalA):
                 a.init_prev_dist(l, counterM[mode + 1], self.counterK)
-        # assert n == len(tensor_train)
         return [[0, 0]]  # initialize regime assignment
 
     def infer_online(
@@ -262,14 +260,14 @@ class HeteroComp(Basemodel):
         for mode, C_mode in enumerate(self.continuousC):
             C_mode.counterQueue.append(self.counterM[mode + 1 + self.nmode_cate])
             if len(C_mode.counterQueue) > self.l:
-                C_mode.counterQueue.popleft()  # 古いカウンタを削除
+                C_mode.counterQueue.popleft()  # pop old counter
             counterM = np.sum(list(C_mode.counterQueue), axis=0)
             C_mode.update_prev_dist(counterM, np.sum(counterM, axis=0))
         self.B.update_prev_dist(self.counterM[0], self.counterA)
         for mode in self.modes:
             mode.save_history()
         self.B.save_history()
-        return False  # リジーム遷移しない
+        return False
 
     def save_online(
         self,
@@ -341,7 +339,7 @@ class HeteroComp(Basemodel):
         self.B.plot(out_dir, time_labels)
         # plot counter (time, topic)
         counterTK = np.concatenate(self.hist_counterTK, axis=0)[: time_labels.shape[0]]
-        plot_time_histgram(out_dir / "counterTK.png", self.colors, counterTK, time_labels, [f"トピック {k + 1}" for k in range(self.k)], self.dataConfig.freq)
+        plot_time_histgram(out_dir / "counterTK.png", self.colors, counterTK, time_labels, [f"Component {k + 1}" for k in range(self.k)], self.dataConfig.freq)
 
     # region (private method)
 
@@ -351,14 +349,13 @@ class HeteroComp(Basemodel):
         self.counterK = np.zeros(self.k, dtype=int)
         n_events: int = len(tensor)
         assignment = np.full(n_events, -1, dtype=int)
-        Asum = tensor.groupby(tensor.keys()[0]).size()  # key[0](time)でグループ分け
+        Asum = tensor.groupby(tensor.keys()[0]).size()
         self.counterA[Asum.index] = Asum.values
         return assignment, n_events, counterM
 
     def log_likelihood_init(self) -> float:
         """compute log likelihood on the initialized phase"""
         llh = 0
-        # B 事前分布をディレクレ分布、尤度を多項分布とした時の周辺尤度
         llh += self.B.log_likelihood_init(self.counterM[0], self.counterA)
         for mode in range(1, self.n_modes):
             llh += self.modes[mode - 1].log_likelihood_init(self.counterM[mode], self.counterK)
@@ -464,12 +461,7 @@ def _gibbs_sampling_online(
 
         # compute topic distribution (7)
         posts = np.ones(K)
-        # mcmc 版 (5個サンプルして平均を取る)
         sample = np.array([np.random.normal(B_mean[x[0], k], np.sqrt(B_variances[x[0], k]), 5).mean() for k in range(K)])
-        # # expectation
-        # sample = B_mean * 0.5 * B_variances #
-        # # map estimation
-        # sample = B_mean
         posts *= np.exp(sample)
         for j in range(1, n_cate_modes):  # for each categorical
             mode_prob = (counterM[j][x[j]] + prev_terms[j - 1][x[j]]) / (counterK + L * alphas[j - 1][x[j]] + ZERO)
@@ -518,10 +510,10 @@ def _gibbs_sampling(
         # sample = B_mean * 0.5 * B_variances # expectation
         # sample = B_mean # map estimation
         posts *= np.exp(sample)
-        for j in range(1, n_cate_modes):  # カテゴリカルなモードごとに
+        for j in range(1, n_cate_modes):
             posts *= counterM[j][x[j]] + alphas[j - 1][x[j]]
             posts /= counterK + np.sum(alphas[j - 1]) + ZERO
-        for j in range(n_cont_modes):  # 連続モードごとに
+        for j in range(n_cont_modes):
             mode_ = j + 1 + n_cate_modes
             posts *= mode_probs[j][x[mode_], :]
         new_topic = draw_one(posts)

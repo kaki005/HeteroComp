@@ -62,7 +62,7 @@ def load_dataset(data_name: str, time_idx: str, continuous_idx: list[str], categ
                     for col in df:
                         logger.info(f"{col=}")
                     for idx in continuous_idx:
-                        df = df[df[idx].astype(float) >= 0]  # フィルタ
+                        df = df[df[idx].astype(float) >= 0]  # filter
                     raw_df = pd.concat([raw_df, df], axis=0)
                     del df
                     gc.collect()
@@ -85,7 +85,7 @@ def load_dataset(data_name: str, time_idx: str, continuous_idx: list[str], categ
                     df = pd.read_parquet(path)
                     df.columns = [str(col).strip() for col in df.columns]
                     for idx in continuous_idx:
-                        df = df[df[idx].astype(float) >= 0]  # フィルタ
+                        df = df[df[idx].astype(float) >= 0]  # filter
                     df[time_idx] = pd.to_datetime(df[time_idx], format="%d/%m/%Y %I:%M:%S %p")
                     raw_df = pd.concat([raw_df, df], axis=0)
                     del df
@@ -135,7 +135,7 @@ def load_dataset(data_name: str, time_idx: str, continuous_idx: list[str], categ
             raw_df[time_idx] = pd.to_datetime(raw_df[time_idx], errors="coerce")
             raw_df = raw_df.sort_values(by=time_idx)
             raw_df = raw_df.dropna(subset=[time_idx])
-            raw_df = raw_df[raw_df[time_idx].dt.year == 2021]  # 異常データをfilt
+            raw_df = raw_df[raw_df[time_idx].dt.year == 2021]  # filt abnormal record
             raw_df[categorical_idx] = raw_df[categorical_idx].astype(str)
             raw_df.loc[raw_df["Attack_type"] == "Normal", "Attack_type"] = 0
         # endregion (Edge)
@@ -473,58 +473,35 @@ def _split_dummies(dummies: pd.DataFrame, separator: str) -> pd.DataFrame:
 
 
 def process_cci18_csv(path, time_idx, continuous_idx):
-    try:
-        print(f"load {path}")
-        df = pd.read_csv(path, dtype=str)
-        for idx in continuous_idx:  # 連続モードごとに
-            df = df[df[idx].astype(float) >= 0]  # フィルタ
-        df = df.astype(str)
-        df = df[df[time_idx].apply(pd.to_datetime).dt.year >= 2018]  # 欠損データをfilt
-        df = df.sort_values(by=time_idx)
-        return df.astype(str)
-
-    except Exception as e:
-        print(f"[ERROR] {path}: {e}")
-        return pd.DataFrame()  # 空で返す
-
-
-def dummy_to_categorical(df: pd.DataFrame, dummy_cols: list[str]) -> pd.Series:
-    row_sums = df[dummy_cols].sum(axis=1)
-
-    # 重複があるかどうかチェック
-    if (row_sums > 1).any():
-        details = []
-        for idx, row in df.iterrows():
-            active = [col for col in dummy_cols if row[col] == 1]
-            if len(active) > 1:
-                details.append(f"行 {idx}: {active}")
-
-        msg = "1行に複数カテゴリが立っています:\n" + "\n".join(details)
-        raise ValueError(msg)
-
-    # 問題なければカテゴリに変換
-    return df[dummy_cols].idxmax(axis=1)
+    print(f"load {path}")
+    df = pd.read_csv(path, dtype=str)
+    for idx in continuous_idx:
+        df = df[df[idx].astype(float) >= 0]  # filter
+    df = df.astype(str)
+    df = df[df[time_idx].apply(pd.to_datetime).dt.year >= 2018]  # filt abnormal record
+    df = df.sort_values(by=time_idx)
+    return df.astype(str)
 
 
 def _remove_na_or_inf(df: pd.DataFrame, col_name: str, logger: logging.Logger) -> pd.DataFrame:
     """
-    指定されたDataFrameの列から、NaNまたは無限大を含む行を削除します。
+    Remove rows containing NaN or infinity from the specified column of the DataFrame.
 
     Args:
-        df (pd.DataFrame): 処理対象のDataFrame。
-        col_name (str): NaNまたは無限大をチェックする列の名前。
-        logger (logging.Logger): ロギングに使用するロガーオブジェクト。
+        df (pd.DataFrame): The DataFrame to process.
+        col_name (str): The name of the column to check for NaN or infinity.
+        logger (logging.Logger): The logger object used for logging.
 
     Returns:
-        pd.DataFrame: NaNまたは無限大の行が削除された新しいDataFrame。
-                      元のDataFrameは変更されません。
+        pd.DataFrame: A new DataFrame with rows containing NaN or infinity removed.
+                      The original DataFrame is not modified.
     """
     df[col_name] = pd.to_numeric(df[col_name], errors="coerce")
     df = df.dropna(subset=[col_name])
-    is_inf = np.isinf(df[col_name])  # 2. 無限大 (inf, -inf) のチェック
-    is_na = df[col_name].isna()  # 3. 欠損値 (NaN) のチェック
-    rows_to_drop = is_inf | is_na  # 4. 削除対象の行を特定
-    return df[~rows_to_drop]  # 6. 該当する行を削除して新しいDataFrameを返す
+    is_inf = np.isinf(df[col_name])  # 2. Check for infinity (inf, -inf)
+    is_na = df[col_name].isna()  # 3. Check for missing values (NaN)
+    rows_to_drop = is_inf | is_na  # 4. Identify rows to remove
+    return df[~rows_to_drop]  # 5. Return a new DataFrame with those rows removed
 
 
 def merge_dummies(df: pd.DataFrame, base_col: str, merge_cols: list[str]):

@@ -15,9 +15,7 @@ data:
   freq : "S"
   init_len :  1200
   categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags"]
-  # categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags", "dns.retransmission",  "http.response", "dns.qry.type", "tcp.flags.ack"]
-  # continuous_idxs: ["tcp.len", "http.content_length", "udp.time_delta", "mbtcp.len"]
-  continuous_idxs: ["tcp.len"] # "http.content_length", "udp.time_delta", "mbtcp.len"は違いがなかった
+  continuous_idxs: ["tcp.len"]
   label_col: "Attack_type"
   time_scale: 3e-3
   src_ip_idx: "ip.src_host"
