@@ -27,7 +27,7 @@ from _src import (
 def main(config: Config):
     try:
         log_init()
-        np.random.seed(0)
+        np.random.seed(config.data.seed)
         logger = logging.getLogger("main")
         config.model.alpha = 1 / config.model.k
         config.model.beta = 1 / config.model.k

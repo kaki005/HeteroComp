@@ -40,36 +40,12 @@ class DataConfig:
     user_idx: str | None = None
     item_idx: str | None = None
     time_scale: float = 0.1
-    src_ip_idx: str = ""
-    dst_ip_idx: str = ""
-    seed :int = 0
+    seed: int = 0
 
 
-# @dataclass_json
-@dataclass
-class WandbConfig:
-    entity: str = ""
-    project: str = ""
-
-
-@dataclass
-class AnographConfig:
-    time_window: int = 0
-    """Time window for processing batches of edges."""
-    edge_threshold: int = 0
-    """Threshold for edge weights in the anomaly detection process."""
-    rows: int = 0
-    """Number of rows in the sketch matrix for density calculations."""
-    buckets: int = 0
-    """Number of buckets in each row of the sketch matrix."""
-
-
-# @dataclass_json
 @dataclass
 class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
-    wandb: WandbConfig = field(default_factory=WandbConfig)
     data: DataConfig = field(default_factory=DataConfig)
-    anograph: AnographConfig = field(default_factory=AnographConfig)
     save_batch: bool = False
     plot_batch: bool = False

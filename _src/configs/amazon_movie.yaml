@@ -20,5 +20,3 @@ data:
   continuous_idxs: ["price"]
   label_col:
   time_scale: 3.5e-1
-  src_ip_idx:
-  dst_ip_idx:

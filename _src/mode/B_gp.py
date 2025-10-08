@@ -254,18 +254,6 @@ def _anomaly_score_vmap(gp: MarkovGP, means, variandes, m0, P0, dts):
     return jnp.squeeze(gp.anomaly_score(means, variandes, m0, P0, dts))
 
 
-# @eqx.filter_jit
-# @eqx.filter_vmap(in_axes=(1, 1, 1, 1))
-# def _kl_divergence_gp(
-#     prior_means:Float[Array, "num_bins 1"],
-#     pre_vars: Float[Array, "num_bins 1 1"],
-#     post_means: Float[Array, "num_bins 1"],
-#     post_vars: Float[Array, "num_bins 1 1"]):
-#     def _kl_gauss(mean1, mean2, var1, var2):
-#         return 0.5 *(jnp.log(var2/ var1) + (var1+ (mean1-mean2)**2)/ var2 -1)
-#     return jnp.sum(jax.vmap(_kl_gauss)(prior_means, post_means, pre_vars, post_vars))
-
-
 def datetime_base(timestamps: np.ndarray, base_time: pd.Timestamp, freq: str, time_scale: float = 1.0):
     diff = timestamps - np.array(base_time)
     diff = np.array(diff).astype("timedelta64[us]")
@@ -281,4 +269,4 @@ def datetime_diff(timestamps: np.ndarray, freq: str, time_scale: float = 1.0):
 def freq_to_timedelta64(freq_str):
     """convart pandas.freq to np.timedelta64."""
     offset = pd.tseries.frequencies.to_offset(freq_str)
-    return np.timedelta64(offset.delta)
+    return np.timedelta64(pd.Timedelta(offset))

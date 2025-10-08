@@ -12,11 +12,9 @@ model:
 data:
   name: "Edge"
   time_idx: "frame.time"
-  freq : "S"
+  freq : "s"
   init_len :  1200
-  categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags"]
+  categorical_idxs : ["tcp.srcport", "tcp.dstport", "ip.src_host", "ip.dst_host", "tcp.flags", "mqtt.protoname"]
   continuous_idxs: ["tcp.len"]
   label_col: "Attack_type"
-  time_scale: 3e-3
-  src_ip_idx: "ip.src_host"
-  dst_ip_idx: "ip.dst_host"
+  time_scale: 1e-3

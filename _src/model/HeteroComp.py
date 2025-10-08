@@ -385,13 +385,14 @@ class HeteroComp(Basemodel):
         if timestamps[0] - pre_timestamp < np.timedelta64(1, "h"):
             timestamps = np.array([pre_timestamp] + list(timestamps))
         curT = self._time_interval(timestamps, pre_timestamp)
+        ZERO = 1e-10
         expect_counterK = (self.normal_counterK + counterK) * curT / (self.total_interval + curT)
         mask = expect_counterK > 0
-        score = np.sum(((counterK - expect_counterK) ** 2 / expect_counterK)[mask])
+        score = np.sum(((counterK - expect_counterK) ** 2 / (expect_counterK + ZERO))[mask])
         for mode in range(self.n_modes - 1):
             expect_M = (self.normal_counterM[mode] + counterM[mode + 1]) * curT / (self.total_interval + curT)
             mask = expect_M > 0
-            score += np.sum(((counterM[mode + 1] - expect_M) ** 2 / expect_M)[mask])
+            score += np.sum(((counterM[mode + 1] - expect_M) ** 2 / (expect_M + ZERO))[mask])
         pval = chi2.sf(score, self.DoF)
         if pval >= 0.05:
             self.total_interval += curT

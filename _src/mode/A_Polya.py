@@ -13,7 +13,7 @@ from scipy.special import digamma
 from _src.configs import ModelConfig
 
 from .base import Base
-from .util import _multi_digamma, log_multi_beta, log_s, save_sparse_matrix
+from .util import _multi_digamma, log_multi_beta, save_sparse_matrix
 
 ZERO = 1.0e-8
 

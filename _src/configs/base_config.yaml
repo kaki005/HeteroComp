@@ -31,12 +31,6 @@ data:
   seed: 0
 
 
-anograph:
-    time_window:  60
-    edge_threshold: 100
-    rows: 2
-    buckets: 32
-
 save_batch: False
 plot_batch: False
 

@@ -183,7 +183,7 @@ def set_minor_tick_per_day(
 
 def split_intervals(timestamps: np.ndarray, freq: str, skip_num: int = 0):
     match freq:
-        case "S":
+        case "S" | "s":
             threshold = np.timedelta64(10, "m")
         case "D":
             threshold = np.timedelta64(15, "D")

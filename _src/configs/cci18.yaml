@@ -13,11 +13,9 @@ model:
 data:
   name: "cci18"
   time_idx: "Timestamp"
-  freq : "S"
-  init_len :  240
+  freq : "s"
+  init_len :  1200
   categorical_idxs : ["Dst Port", "Src IP", "Dst IP", "Protocol"]
   continuous_idxs: [ "Flow Duration", "Total Length of Fwd Packet", "Total Length of Bwd Packet", "Fwd Header Length", "Bwd Header Length", "Flow IAT Mean"]
   label_col: "Label"
-  time_scale: 7e-4
-  src_ip_idx: "Src IP"
-  dst_ip_idx: "Dst IP"
+  time_scale: 5e-3
