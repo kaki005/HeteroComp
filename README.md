@@ -7,10 +7,10 @@ Official implementation of "Multi-Aspect Mining and Anomaly Detection for Hetero
 - We propose HeteroComp, a method for continuously summarizing heterogeneous tensor streams into "components" representing latent groups in each attribute and their temporal dynamics, and detecting group anomalies.
 ### Graphical Model
 The graphical model of our model is following:
-![](./figure/graphical.pdf)
+![graphical model](./figure/graphical.png)
 ### Algorithm
 The overview of our algorithm is following:
-![](./figure/model.pdf)
+![algorithm](./figure/model.png)
 
 
 ## Setup
