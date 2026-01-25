@@ -1,6 +1,16 @@
-# HeteroComp
+# HeteroComp: Multi-Aspect Mining and Anomaly Detection for Heterogeneous Tensor Streams
 
+Official implementation of "Multi-Aspect Mining and Anomaly Detection for Heterogeneous Tensor Streams", Soshi Kakio, Yasuko Matsubara, Ren Fujiwara, and Yasushi Sakurai. at [the ACM Web Conference 2026 (WWW '26)](https://www2026.thewebconf.org/).
 
+## Introduction
+- We focus on event tensor streams consisting of timestamps and categorical attributes (e.g., IP address, port number) and continuous attributes (e.g., packet length, tcp duration), and refer such relationships as "heterogeneous tensor streams".
+- We propose HeteroComp, a method for continuously summarizing heterogeneous tensor streams into "components" representing latent groups in each attribute and their temporal dynamics, and detecting group anomalies.
+### Graphical Model
+The graphical model of our model is following:
+![](./figure/graphical.pdf)
+### Algorithm
+The overview of our algorithm is following:
+![](./figure/model.pdf)
 
 
 ## Setup
